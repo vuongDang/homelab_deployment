@@ -1,0 +1,31 @@
+services:
+  # 1. The "Brain" (The Interface)
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    restart: always
+    ports:
+      - "3000:8080"
+    volumes:
+      - ./webui-data:/app/backend/data
+    environment:
+      - OLLAMA_BASE_URL=http://llama3:11434
+    depends_on:
+      - llama3
+
+  # 2. The "Muscle" ( The Model Backend)
+  llama3:
+    build: ./ollama/
+    container_name: llama3
+    restart: always
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./ollama-data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

@@ -1,0 +1,23 @@
+# Terraform / OpenTofu
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars           <-- CRITICAL: This holds your passwords
+.terraform.lock.hcl
+
+# Ansible
+*.retry
+inventory.ini      <-- CRITICAL: IPs and Users often live here
+secrets.yml        <-- If you use external variable files
+
+# SSH Keys
+id_rsa
+id_rsa.pub
+
+# General
+.DS_Store
+.env
+
+# ollama
+*ollama-data/
+*webui-data/
