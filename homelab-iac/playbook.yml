@@ -1,0 +1,79 @@
+- name: Setup Docker
+  hosts: proxmox_lxc
+  become: true
+
+  vars:
+    vault_tunnel_token: !vault |
+      $ANSIBLE_VAULT;1.1;AES256
+      36613234366466356564643365343932616534343830623030323032303531636436393465306366
+      6134376361346139363231653262636461633531656462310a363032383661643236653366336238
+      35623061616136343964313535666234663864383364356430643639656631663165393339636630
+      3165343430626239610a356538656464653036613533633964386238363539346162613839663137
+      32623135303139626661386539363137383361376363316332613537623336613035613034623335
+      37336661363135643733396239313835663039333430376630626330346539646233323339633461
+      61623462393139626432303263643933653738623639386237373963346133383965613066353061
+      30666461303761643137623533343564313433376535343437626637326335336636346666303934
+      61306631363963666263633636393231643432373431653562363362373634386361396164323736
+      62316632363761646466613164316665353935313765303634363862376338396230303063343962
+      38303934376335333130363963373362363436396263316665656163306435343330346337613661
+      61326131383236373762323835313661343638643737373562356538363166323538353763623361
+      38373139356461383935373934323937343637303662623965353262393165316366
+
+  tasks:
+    - name: Update apt and install dependencies
+      apt:
+        name: [curl, git, ca-certificates, gnupg]
+        state: present
+        update_cache: yes
+
+    - name: Install Docker
+      shell: curl -fsSL https://get.docker.com | sh
+      args:
+        creates: /usr/bin/docker
+
+    - name: Ensure Docker is running
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Create boum directory
+      file:
+        path: /opt/boum
+        state: directory
+        mode: "0755"
+
+    - name: Clone viva-padel repository
+      git:
+        repo: "https://github.com/vuongDang/viva-padel.git"
+        dest: /opt/boum/viva-padel
+        version: main
+        force: yes
+        update: yes
+
+    - name: Install Docker Compose
+      ansible.builtin.get_url:
+        url: https://github.com/docker/compose/releases/download/v2.24.6/docker-compose-linux-x86_64
+        dest: /usr/local/bin/docker-compose
+        mode: "0755"
+
+    - name: Deploy viva-padel server
+      ansible.builtin.command: docker-compose up -d --build
+      args:
+        chdir: /opt/boum/viva-padel
+      environment:
+        # Comment this line if you want to run the server in test mode
+        CARGO_BUILD_FLAGS: "--no-default-features"
+      no_log: true
+
+    - name: Copy tunnel docker-compose file
+      ansible.builtin.copy:
+        src: docker-compose.tunnel.yml
+        dest: /opt/boum/docker-compose.tunnel.yml
+
+    - name: Deploy cloudflare tunnel
+      ansible.builtin.command: docker-compose -f docker-compose.tunnel.yml up -d
+      args:
+        chdir: /opt/boum
+      environment:
+        TUNNEL_TOKEN: "{{ vault_tunnel_token }}"

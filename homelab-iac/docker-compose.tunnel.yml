@@ -1,0 +1,17 @@
+version: "3.8"
+
+services:
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: always
+    container_name: cloudflare-tunnel
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    networks:
+      - viva-padel-net
+
+networks:
+  viva-padel-net:
+    name: viva-padel_default # This assumes the project name for the other compose file is 'viva-padel'
+    external: true
