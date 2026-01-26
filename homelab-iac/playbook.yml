@@ -18,6 +18,16 @@
       38303934376335333130363963373362363436396263316665656163306435343330346337613661
       61326131383236373762323835313661343638643737373562356538363166323538353763623361
       38373139356461383935373934323937343637303662623965353262393165316366
+    vault_jwt_secret: !vault |
+      $ANSIBLE_VAULT;1.1;AES256
+      63393262636330306266656235646237316535363065326166393830393936646663626466303466
+      3731356461633934626339336230346661316564646232660a636132633839313634643036646666
+      34326162623166353931643935623939343735326636636666613234316232363939353064666565
+      6339366538666234320a616239393763643965313366333336643937653534396463306263616232
+      64376133303432373162323630633361646363356536393264373765663338653961326461623033
+      65353661363134353439653638396232343333393036623665336562343231323830366633393664
+      64386566393734323830343633353931343434356637356339653130653433376134336163633565
+      31633839376562316437
 
   tasks:
     - name: Update apt and install dependencies
@@ -51,6 +61,38 @@
         force: yes
         update: yes
 
+    - name: Ensure that padelgroup exits
+      group:
+        name: padelgroup
+        gid: 1001
+        state: present
+
+    - name: Ensure that padeluser exists
+      user:
+        name: padeluser
+        uid: 1001
+        state: present
+        group: padelgroup
+        groups: docker # Allows the user to run docker commands
+        append: yes
+
+    - name: Create data directory for SQLite
+      file:
+        path: /opt/boum/viva-padel-data
+        state: directory
+        owner: 1001
+        group: 1001
+        mode: "0777" # Temporarily open to debug permission issues
+        recurse: yes
+
+    - name: Secure the .env file
+      template:
+        src: templates/env.j2
+        dest: /opt/boum/viva-padel-data/.env
+        owner: 1001
+        group: 1001
+        mode: "0644" # Secure the .env file
+
     - name: Install Docker Compose
       ansible.builtin.get_url:
         url: https://github.com/docker/compose/releases/download/v2.24.6/docker-compose-linux-x86_64
@@ -64,7 +106,9 @@
       environment:
         # Comment this line if you want to run the server in test mode
         CARGO_BUILD_FLAGS: "--no-default-features"
-      no_log: true
+        DATA_PATH: "/opt/boum/viva-padel-data"
+        DATABASE_URL: "sqlite:///usr/local/share/viva-padel-server/data/viva_padel.db?mode=rwc"
+      # no_log: true
 
     - name: Copy tunnel docker-compose file
       ansible.builtin.copy:

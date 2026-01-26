@@ -43,7 +43,7 @@ Will install dependencies and deploy our docker applications from the `playbook.
 - deploy cloudflare tunnel docker container
 
 ```bash
-ansible-playbook -i inventory.ini playbook.yml --ask-vault-pas
+ansible-playbook -i inventory.ini playbook.yml --ask-vault-pass -vv
 ```
 
 NOTE: if you want to run the backend in test mode, comment the line  `CARGO_BUILD_FLAGS: "--no-default-features"`
